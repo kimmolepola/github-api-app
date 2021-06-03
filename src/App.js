@@ -1,23 +1,43 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+
+import { useQuery, gql } from '@apollo/client';
+
+const EXCHANGE_RATES = gql`
+query {
+  __schema {
+    types {
+      name
+      kind
+      description
+      fields {
+        name
+      }
+    }
+  }
+}
+`;
+
+function ExchangeRates() {
+  const { loading, error, data } = useQuery(EXCHANGE_RATES);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error :(</p>;
+
+  console.log('data: ', data);
+
+  return (
+    <div>
+      <p>
+        {JSON.stringify(data)}
+      </p>
+    </div>
+  );
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <ExchangeRates />
     </div>
   );
 }
