@@ -2,29 +2,88 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Typography, Card, Paper } from '@material-ui/core';
 
-const asdf = async () => {
-  // repositories = await axios.get('https://api.github.com/orgs/Vincit/repos', { headers: { Authorization: 'Bearer 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' } });
-  // const repository = await axios.get('https://api.github.com/repos/Vincit/objection.js', { headers: { Authorization: 'Bearer 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' } });
-  // const statsContributors = await axios.get('https://api.github.com/repos/Vincit/objection.js/stats/contributors', { headers: { Authorization: 'Bearer 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' } });
-  // console.log('repositories: ', repositories);
-  // console.log('stats contributors', statsContributors);
+const trim = (result) => {
+  let trimmed;
+  if (result && result.status === 200) {
+    trimmed = result.data.map((x) => ({
+      login: x.author ? x.author.login ? x.author.login : null : null,
+      total: x.total,
+      weeks: x.weeks.reduce((acc, cur) => {
+        if (cur.a && cur.c && cur.d) {
+          return acc.concat(cur);
+        }
+        return acc;
+      }, []),
+    }));
+  }
+  if (result && result.status === 202) {
+    trimmed = null;
+  }
+  return trimmed;
 };
-asdf();
 
-const organization = 'Vincit';
+const fetchStatistics = async ({
+  repositories, statistics, retryList, setStatistics, setRetryList,
+}) => {
+  try {
+    const fetchedStatistics = await Promise.all(repositories.map(async (x) => {
+      const result = await axios.get(
+        `https://api.github.com/repos/${process.env.REACT_APP_ORGANIZATION}/${x.name}/stats/contributors`,
+        { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
+      );
+      return { repository: x, statistics: result };
+    }));
+    const newStatistics = { ...statistics };
+    const newRetryList = [...retryList];
+    fetchedStatistics.forEach((x) => {
+      if (x.statistics.status === 200) {
+        newStatistics[x.repository.id] = trim(x.statistics);
+      }
+      if (x.statistics.status === 202) {
+        newRetryList.push(x.repository);
+      }
+    });
+    setStatistics(newStatistics);
+    setRetryList(newRetryList);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const retryFetchStatistics = ({
+  repositories, statistics, retryList, setStatistics, setRetryList,
+}) => {
+
+};
 
 const App = () => {
   const [repositories, setRepositories] = useState([]);
   const [statistics, setStatistics] = useState({});
   const [retryList, setRetryList] = useState([]);
+
   useEffect(async () => {
-    const result = await axios.get(`https://api.github.com/orgs/${organization}/repos`, { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } });
-    setRepositories(result.data);
+    try {
+      const { data } = await axios.get(
+        `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
+        { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
+      );
+      setRepositories(data);
+    } catch (error) {
+      console.error(error);
+    }
   }, []);
-  useEffect(async () => {
-    const results = [];
-    /// /////////////////////
-    // https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
+
+  useEffect(() => {
+    fetchStatistics({
+      repositories, statistics, retryList, setStatistics, setRetryList,
+    });
+  }, [repositories]);
+
+  /// /////////////////////
+  // https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
+
+  /*
+   const results = [];
     repositories.forEach((repo) => { // for of
       const fetch = async () => {
         const result = await axios.get(`https://api.github.com/repos/${organization}/${repo.name}/stats/contributors`, { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } });
@@ -65,6 +124,7 @@ const App = () => {
     if (retryList.length) {
       /// //////////////////
       // https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
+      // promise.all map ?
       retryList.forEach((repo) => { // for of
         const fetch = async () => {
           const result = await axios.get(`https://api.github.com/repos/${organization}/${repo.name}/stats/contributors`, { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } });
@@ -92,6 +152,7 @@ const App = () => {
       setTimeout(() => retryLoop(), 30000);
     }
   };
+*/
 
   return (
     <div style={{
