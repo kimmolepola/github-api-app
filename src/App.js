@@ -38,13 +38,13 @@ const fetchStatistics = async ({
     const retryList = [];
     fetchedStatistics.forEach((x) => {
       if (x.statistics.status === 200) {
-        newStatistics[x.repository.id] = trim(x.statistics);
+        newStatistics[x.repository.id] = trim(x.statistics).sort((xx, yy) => yy.total - xx.total);
       }
       if (x.statistics.status === 202) {
         retryList.push(x.repository);
       }
     });
-
+    console.log('new statistics: ', newStatistics);
     setStatistics(newStatistics);
     if (retryList.length) {
       console.log('retry: ', retryList);
@@ -80,6 +80,9 @@ const App = () => {
     });
   }, [repositories]);
 
+  const asdf = ['a', 'b', 'c', 'd'];
+  console.log('slice: ', asdf.slice(0, 5));
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'yellow',
@@ -98,6 +101,12 @@ const App = () => {
           <Typography>Forks: {x.fork_count}</Typography>
           <Typography>Created at: {x.created_at}</Typography>
           <Typography>Updated at: {x.updated_at}</Typography>
+          <Typography variant="subtitle1" style={{ marginTop: 5 }}>Most commits</Typography>
+          { statistics[x.id]
+            ? statistics[x.id].slice(0, 3).map((xx) => (
+              <Typography key={xx.login}>{xx.login}: {xx.total}</Typography>
+            ))
+            : null }
         </Paper>
       ))}
     </div>
