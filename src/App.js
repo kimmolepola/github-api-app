@@ -23,7 +23,7 @@ const trim = (result) => {
 };
 
 const fetchStatistics = async ({
-  repositories, statistics, retryList, setStatistics, setRetryList,
+  repositories, statistics, setStatistics,
 }) => {
   try {
     const fetchedStatistics = await Promise.all(repositories.map(async (x) => {
@@ -33,33 +33,34 @@ const fetchStatistics = async ({
       );
       return { repository: x, statistics: result };
     }));
+    console.log('fetched statistics: ', fetchedStatistics);
     const newStatistics = { ...statistics };
-    const newRetryList = [...retryList];
+    const retryList = [];
     fetchedStatistics.forEach((x) => {
       if (x.statistics.status === 200) {
         newStatistics[x.repository.id] = trim(x.statistics);
       }
       if (x.statistics.status === 202) {
-        newRetryList.push(x.repository);
+        retryList.push(x.repository);
       }
     });
+
     setStatistics(newStatistics);
-    setRetryList(newRetryList);
+    if (retryList.length) {
+      console.log('retry: ', retryList);
+      setTimeout(
+        () => fetchStatistics({ repositories: retryList, statistics, setStatistics }),
+        3000,
+      );
+    }
   } catch (error) {
     console.error(error);
   }
 };
 
-const retryFetchStatistics = ({
-  repositories, statistics, retryList, setStatistics, setRetryList,
-}) => {
-
-};
-
 const App = () => {
   const [repositories, setRepositories] = useState([]);
   const [statistics, setStatistics] = useState({});
-  const [retryList, setRetryList] = useState([]);
 
   useEffect(async () => {
     try {
@@ -75,84 +76,9 @@ const App = () => {
 
   useEffect(() => {
     fetchStatistics({
-      repositories, statistics, retryList, setStatistics, setRetryList,
+      repositories, statistics, setStatistics,
     });
   }, [repositories]);
-
-  /// /////////////////////
-  // https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
-
-  /*
-   const results = [];
-    repositories.forEach((repo) => { // for of
-      const fetch = async () => {
-        const result = await axios.get(`https://api.github.com/repos/${organization}/${repo.name}/stats/contributors`, { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } });
-        console.log(result);
-        if (result && result.status === 200) {
-          const trimmedResult = result.data.map((x) => ({
-            login: x.author ? x.author.login ? x.author.login : null : null,
-            total: x.total,
-            weeks: x.weeks.reduce((acc, cur) => {
-              if (cur.a && cur.c && cur.d) {
-                return acc.concat(cur);
-              }
-              return acc;
-            }, []),
-          }));
-          const newStatistics = { ...statistics };
-          newStatistics[repo.id] = trimmedResult;
-          setStatistics(newStatistics);
-          console.log('trimmed: ', trimmedResult);
-          sessionStorage.setItem(repo.id, JSON.stringify(trimmedResult));
-        }
-        if (result && result.status === 202) {
-          setRetryList([...retryList, repo]);
-        }
-      };
-      if (!sessionStorage.getItem(repo.id)) {
-        fetch();
-      }
-    });
-  }, [repositories]);
-  console.log('reps: ', repositories);
-  console.log('statistics: ', statistics);
-  console.log('retryList: ', retryList);
-  console.log('session storage: ', sessionStorage);
-  // localStorage.clear();
-
-  const retryLoop = () => {
-    if (retryList.length) {
-      /// //////////////////
-      // https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop
-      // promise.all map ?
-      retryList.forEach((repo) => { // for of
-        const fetch = async () => {
-          const result = await axios.get(`https://api.github.com/repos/${organization}/${repo.name}/stats/contributors`, { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } });
-          console.log(result);
-          if (result && result.status === 200) {
-            const trimmedResult = result.data.map((x) => ({
-              login: x.author ? x.author.login ? x.author.login : null : null,
-              total: x.total,
-              weeks: x.weeks.reduce((acc, cur) => {
-                if (cur.a && cur.c && cur.d) {
-                  return acc.concat(cur);
-                }
-                return acc;
-              }, []),
-            }));
-            const newStatistics = { ...statistics };
-            newStatistics[repo.id] = trimmedResult;
-            setStatistics(newStatistics);
-            console.log('trimmed: ', trimmedResult);
-            sessionStorage.setItem(repo.id, JSON.stringify(trimmedResult));
-          }
-        };
-        fetch();
-      });
-      setTimeout(() => retryLoop(), 30000);
-    }
-  };
-*/
 
   return (
     <div style={{
