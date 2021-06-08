@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Typography, Card, Paper } from '@material-ui/core';
+import parseLink from 'parse-link-header';
 
 const trim = (result) => {
   let trimmed;
@@ -17,78 +18,185 @@ const trim = (result) => {
     }));
   }
   if (result && result.status === 202) {
-    trimmed = null;
+    trimmed = [];
   }
   return trimmed;
 };
 
-const fetchStatistics = async ({
-  repositories, statistics, setStatistics,
-}) => {
+const fetchStatistics = async (repositoryNames) => {
   try {
-    const fetchedStatistics = await Promise.all(repositories.map(async (x) => {
+    console.log('reps names: ', repositoryNames);
+    return await Promise.all(repositoryNames.map(async (repositoryName) => {
       const result = await axios.get(
-        `https://api.github.com/repos/${process.env.REACT_APP_ORGANIZATION}/${x.name}/stats/contributors`,
+        `https://api.github.com/repos/${process.env.REACT_APP_ORGANIZATION}/${repositoryName}/stats/contributors`,
         { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
       );
-      return { repository: x, statistics: result };
+      return { repositoryName, statistics: result };
     }));
-    console.log('fetched statistics: ', fetchedStatistics);
-    const newStatistics = { ...statistics };
-    const retryList = [];
-    fetchedStatistics.forEach((x) => {
-      if (x.statistics.status === 200) {
-        newStatistics[x.repository.id] = trim(x.statistics).sort((xx, yy) => yy.total - xx.total);
-      }
-      if (x.statistics.status === 202) {
-        retryList.push(x.repository);
-      }
-    });
-    console.log('new statistics: ', newStatistics);
-    setStatistics(newStatistics);
-    if (retryList.length) {
-      console.log('retry: ', retryList);
-      setTimeout(
-        () => fetchStatistics({ repositories: retryList, statistics, setStatistics }),
-        3000,
-      );
-    }
   } catch (error) {
     console.error(error);
+    return null;
+  }
+};
+
+const handleStatistics = async ({
+  statistics, setStatistics, statisticsRetry, setStatisticsRetry, repositoryNames,
+}) => {
+  console.log('handle stats, names: ', repositoryNames);
+  if (repositoryNames.length) {
+    const fetchedStatistics = await fetchStatistics(repositoryNames);
+    if (fetchedStatistics) {
+      const newStatistics = { ...statistics };
+
+      const newStatisticsRetry = repositoryNames.reduce(
+        (acc, cur) => acc.filter((x) => x !== cur),
+        [...statisticsRetry],
+      );
+
+      console.log('in handleStatistics, fetchedStatistics: ', fetchedStatistics);
+      console.log('in handleStatistics, newStatisticsRetry: ', newStatisticsRetry);
+      console.log('in handleStatistics, repositoryNames: ', repositoryNames);
+      console.log('in handleStatistics, statisticsRetry: ', statisticsRetry);
+
+      fetchedStatistics.forEach((x) => {
+        if (x.statistics.status === 200) {
+          newStatistics[x.repositoryName] = trim(x.statistics)
+            .sort((xx, yy) => yy.total - xx.total);
+        }
+        if (x.statistics.status === 202) {
+          console.log('202stat: ', x);
+          newStatisticsRetry.push(x.repositoryName);
+        }
+      });
+      setStatistics(newStatistics);
+      setStatisticsRetry(newStatisticsRetry);
+    }
+  }
+};
+
+const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
+  const newPagesObject = { ...pages };
+  if (repositoriesFetchResult.data) {
+    if (!newPagesObject[`page${page}`]) {
+      newPagesObject[`page${page}`] = {};
+    }
+    newPagesObject[`page${page}`].repositories = repositoriesFetchResult.data;
+  }
+  if (repositoriesFetchResult.headers && repositoriesFetchResult.headers.link) {
+    const links = parseLink(repositoriesFetchResult.headers.link);
+    Object.keys(links).forEach((x) => {
+      if (links[x].page) {
+        if (!newPagesObject[`page${links[x].page}`]) {
+          newPagesObject[`page${links[x].page}`] = {};
+        }
+        newPagesObject[`page${links[x].page}`].link = links[x].url;
+      }
+    });
+  }
+  return newPagesObject;
+};
+
+const fetchRepositories = async ({ link }) => {
+  try {
+    return await axios.get(
+      link,
+      { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
+    );
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
+const handleNewPage = async ({
+  page, pages, setPages, statistics, setStatistics, statisticsRetry, setStatisticsRetry,
+}) => {
+  if (pages[`page${page}`] && pages[`page${page}`].link) {
+    const result = await fetchRepositories({ link: pages[`page${page}`].link });
+    if (result) {
+      const newPagesObject = createNewPagesObject({ pages, page, repositoriesFetchResult: result });
+      setPages(newPagesObject);
+      handleStatistics({
+        statistics,
+        setStatistics,
+        statisticsRetry,
+        setStatisticsRetry,
+        repositoryNames: result.data ? result.data.map((x) => x.name) : [],
+      });
+    }
   }
 };
 
 const App = () => {
-  const [repositories, setRepositories] = useState([]);
+  const [retryTimer, setRetryTimer] = useState(null);
+  const [asdf, setAsdf] = useState(false);
+  const [retry, setRetry] = useState(false);
+  const [activePage, setActivePage] = useState(1);
+  const [statisticsRetry, setStatisticsRetry] = useState([]);
   const [statistics, setStatistics] = useState({});
+  const [pages, setPages] = useState({
+    first: 1,
+    last: undefined,
+    page1: {
+      link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
+      repositories: [],
+    },
+  });
 
-  useEffect(async () => {
-    try {
-      const { data } = await axios.get(
-        `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
-        { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
-      );
-      setRepositories(data);
-    } catch (error) {
-      console.error(error);
+  console.log('statistics: ', statistics);
+
+  console.log('statisticsRetry: ', statisticsRetry);
+
+  useEffect(() => {
+    if (asdf) {
+      setAsdf(false);
+      console.log('page: ', activePage);
+      setActivePage(activePage + 1);
+      setTimeout(() => setAsdf(true), 8000);
     }
+  }, [asdf]);
+
+  useEffect(() => {
+    // setTimeout(() => setAsdf(true), 10000);
   }, []);
 
   useEffect(() => {
-    fetchStatistics({
-      repositories, statistics, setStatistics,
+    handleNewPage({
+      page: activePage,
+      pages,
+      setPages,
+      statistics,
+      setStatistics,
+      statisticsRetry,
+      setStatisticsRetry,
     });
-  }, [repositories]);
+  }, [activePage]);
 
-  const asdf = ['a', 'b', 'c', 'd'];
-  console.log('slice: ', asdf.slice(0, 5));
+  useEffect(() => {
+    if (statisticsRetry.length && !retryTimer) {
+      setRetryTimer(setInterval(() => { setRetry(true); }, 3000));
+    }
+    if (statisticsRetry.length === 0 && retryTimer) {
+      clearInterval(retryTimer);
+    }
+    if (retry) {
+      setRetry(false);
+      handleStatistics({
+        statistics,
+        setStatistics,
+        statisticsRetry,
+        setStatisticsRetry,
+        repositoryNames: statisticsRetry,
+      });
+    }
+  }, [statisticsRetry, retry]);
 
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'yellow',
     }}
     >
-      {repositories.map((x) => (
+      {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
         <Paper
           key={x.id}
           style={{
@@ -108,7 +216,7 @@ const App = () => {
             ))
             : null }
         </Paper>
-      ))}
+      )) : null : null}
     </div>
   );
 };
