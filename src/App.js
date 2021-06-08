@@ -25,7 +25,6 @@ const trim = (result) => {
 
 const fetchStatistics = async (repositoryNames) => {
   try {
-    console.log('reps names: ', repositoryNames);
     return await Promise.all(repositoryNames.map(async (repositoryName) => {
       const result = await axios.get(
         `https://api.github.com/repos/${process.env.REACT_APP_ORGANIZATION}/${repositoryName}/stats/contributors`,
@@ -42,30 +41,29 @@ const fetchStatistics = async (repositoryNames) => {
 const handleStatistics = async ({
   statistics, setStatistics, statisticsRetry, setStatisticsRetry, repositoryNames,
 }) => {
-  console.log('handle stats, names: ', repositoryNames);
   if (repositoryNames.length) {
     const fetchedStatistics = await fetchStatistics(repositoryNames);
     if (fetchedStatistics) {
       const newStatistics = { ...statistics };
 
-      const newStatisticsRetry = repositoryNames.reduce(
-        (acc, cur) => acc.filter((x) => x !== cur),
-        [...statisticsRetry],
-      );
-
-      console.log('in handleStatistics, fetchedStatistics: ', fetchedStatistics);
-      console.log('in handleStatistics, newStatisticsRetry: ', newStatisticsRetry);
-      console.log('in handleStatistics, repositoryNames: ', repositoryNames);
-      console.log('in handleStatistics, statisticsRetry: ', statisticsRetry);
+      const newStatisticsRetry = { ...statisticsRetry };
 
       fetchedStatistics.forEach((x) => {
         if (x.statistics.status === 200) {
           newStatistics[x.repositoryName] = trim(x.statistics)
             .sort((xx, yy) => yy.total - xx.total);
+          delete newStatisticsRetry[x.repositoryName];
         }
         if (x.statistics.status === 202) {
-          console.log('202stat: ', x);
-          newStatisticsRetry.push(x.repositoryName);
+          if (newStatisticsRetry[x.repositoryName] || newStatisticsRetry[x.repositoryName] === 0) {
+            if (newStatisticsRetry[x.repositoryName] > 2) { // if tried to fetch three times already
+              delete newStatisticsRetry[x.repositoryName]; // don't try to fetch anymore
+            } else {
+              newStatisticsRetry[x.repositoryName] += 1; // increase fetch count
+            }
+          } else {
+            newStatisticsRetry[x.repositoryName] = 0; // create new
+          }
         }
       });
       setStatistics(newStatistics);
@@ -131,8 +129,8 @@ const App = () => {
   const [retryTimer, setRetryTimer] = useState(null);
   const [asdf, setAsdf] = useState(false);
   const [retry, setRetry] = useState(false);
-  const [activePage, setActivePage] = useState(1);
-  const [statisticsRetry, setStatisticsRetry] = useState([]);
+  const [activePage, setActivePage] = useState(15);
+  const [statisticsRetry, setStatisticsRetry] = useState({});
   const [statistics, setStatistics] = useState({});
   const [pages, setPages] = useState({
     first: 1,
@@ -141,16 +139,14 @@ const App = () => {
       link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
       repositories: [],
     },
+    page15: {
+      link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos?page=15`,
+    },
   });
-
-  console.log('statistics: ', statistics);
-
-  console.log('statisticsRetry: ', statisticsRetry);
 
   useEffect(() => {
     if (asdf) {
       setAsdf(false);
-      console.log('page: ', activePage);
       setActivePage(activePage + 1);
       setTimeout(() => setAsdf(true), 8000);
     }
@@ -173,22 +169,25 @@ const App = () => {
   }, [activePage]);
 
   useEffect(() => {
-    if (statisticsRetry.length && !retryTimer) {
-      setRetryTimer(setInterval(() => { setRetry(true); }, 3000));
-    }
-    if (statisticsRetry.length === 0 && retryTimer) {
-      clearInterval(retryTimer);
-    }
-    if (retry) {
-      setRetry(false);
-      handleStatistics({
-        statistics,
-        setStatistics,
-        statisticsRetry,
-        setStatisticsRetry,
-        repositoryNames: statisticsRetry,
-      });
-    }
+    (() => {
+      if (Object.keys(statisticsRetry).length && !retryTimer) {
+        const timer = setInterval(() => { setRetry(true); }, 3000);
+        setRetryTimer(timer);
+      }
+      if (Object.keys(statisticsRetry).length === 0 && retryTimer) {
+        clearInterval(retryTimer);
+      }
+      if (retry) {
+        setRetry(false);
+        handleStatistics({
+          statistics,
+          setStatistics,
+          statisticsRetry,
+          setStatisticsRetry,
+          repositoryNames: Object.keys(statisticsRetry),
+        });
+      }
+    })();
   }, [statisticsRetry, retry]);
 
   return (
