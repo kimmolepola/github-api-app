@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { ThemeProvider, unstable_createMuiStrictModeTheme as createMuiTheme } from '@material-ui/core/styles';
+import { ThemeProvider } from '@material-ui/core/styles';
 import {
-  Typography, Card, Paper, InputLabel, FormControl, Select, MenuItem,
+  Typography, Card, Paper, InputLabel, FormControl, Select, MenuItem, CssBaseline,
 } from '@material-ui/core';
 import parseLink from 'parse-link-header';
+import theme from './theme';
 
 const trimStatistics = (result) => {
   let trimmed;
@@ -34,7 +35,6 @@ const fetchStatistics = async (repositoryNames) => {
         `https://api.github.com/repos/${process.env.REACT_APP_ORGANIZATION}/${repositoryName}/stats/contributors`,
         { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
       );
-      console.log('stats fetch result: ', result);
       return { repositoryName, statistics: result };
     }));
   } catch (error) {
@@ -58,8 +58,6 @@ const handleStatistics = async ({
       const newStatistics = { ...statistics };
       const newStatisticsRetry = { ...statisticsRetry };
       const newTimePeriodSelect = { ...timePeriodSelect };
-
-      console.log('fetched stats: ', fetchedStatistics);
 
       fetchedStatistics.forEach((x) => {
         if (x.statistics.status === 200) {
@@ -207,7 +205,21 @@ const App = () => {
   }, [statisticsRetry, retry]);
 
   return (
-    <ThemeProvider theme={createMuiTheme()}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div style={{
+        background: 'red', padding: 15,
+      }}
+      >
+        <Typography
+          variant="subtitle1"
+          style={{
+            marginLeft: 20, color: 'white',
+          }}
+        >
+          Github API App
+        </Typography>
+      </div>
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'white',
       }}
@@ -228,38 +240,35 @@ const App = () => {
             <Typography variant="subtitle1" style={{ marginTop: 5 }}>Most commits</Typography>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'left' }}>
               { statistics[x.name]
-                ? statistics[x.name].slice(0, 3).map((xx) => {
-                  console.log('stats xx: ', xx);
-                  return (
-                    <div key={xx.login}>
-                      <div
-                        style={{
-                          display: 'flex', flexDirection: 'row', alignItems: 'center',
-                        }}
-                      >
-                        <img style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }} alt="avatar_url" width="50" height="50" src={xx.avatar_url} />
-                        <Typography>{xx.login}: {xx.total}</Typography>
-                      </div>
-                      <FormControl style={{ margin: 5, minWidth: 120 }}>
-                        <InputLabel id="simple-select-label">Time period</InputLabel>
-                        <Select
-                          labelId="simple-select-label"
-                          id="simple-select"
-                          value={timePeriodSelect[xx.login]}
-                          onChange={(xxx) => setTimePeriodSelect({
-                            ...timePeriodSelect,
-                            [xx.login]: xxx.target.value,
-                          })}
-                        >
-                          <MenuItem value={0}>Zero</MenuItem>
-                          <MenuItem value={10}>Ten</MenuItem>
-                          <MenuItem value={20}>Twenty</MenuItem>
-                          <MenuItem value={30}>Thirty</MenuItem>
-                        </Select>
-                      </FormControl>
+                ? statistics[x.name].slice(0, 3).map((xx) => (
+                  <div key={xx.login}>
+                    <div
+                      style={{
+                        display: 'flex', flexDirection: 'row', alignItems: 'center',
+                      }}
+                    >
+                      <img style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }} alt="avatar_url" width="50" height="50" src={xx.avatar_url} />
+                      <Typography>{xx.login}: {xx.total}</Typography>
                     </div>
-                  );
-                })
+                    <FormControl style={{ margin: 5, minWidth: 120 }}>
+                      <InputLabel id="simple-select-label">Time period</InputLabel>
+                      <Select
+                        labelId="simple-select-label"
+                        id="simple-select"
+                        value={timePeriodSelect[xx.login]}
+                        onChange={(xxx) => setTimePeriodSelect({
+                          ...timePeriodSelect,
+                          [xx.login]: xxx.target.value,
+                        })}
+                      >
+                        <MenuItem value={0}>Zero</MenuItem>
+                        <MenuItem value={10}>Ten</MenuItem>
+                        <MenuItem value={20}>Twenty</MenuItem>
+                        <MenuItem value={30}>Thirty</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </div>
+                ))
                 : null }
             </div>
           </Paper>
@@ -270,4 +279,3 @@ const App = () => {
 };
 
 export default App;
-// <img width="50" height="50" src="picture.jpg" />
