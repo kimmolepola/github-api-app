@@ -145,18 +145,6 @@ const App = () => {
   });
 
   useEffect(() => {
-    if (asdf) {
-      setAsdf(false);
-      setActivePage(activePage + 1);
-      setTimeout(() => setAsdf(true), 8000);
-    }
-  }, [asdf]);
-
-  useEffect(() => {
-    // setTimeout(() => setAsdf(true), 10000);
-  }, []);
-
-  useEffect(() => {
     handleNewPage({
       page: activePage,
       pages,
