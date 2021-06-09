@@ -127,9 +127,8 @@ const handleNewPage = async ({
 
 const App = () => {
   const [retryTimer, setRetryTimer] = useState(null);
-  const [asdf, setAsdf] = useState(false);
   const [retry, setRetry] = useState(false);
-  const [activePage, setActivePage] = useState(15);
+  const [activePage, setActivePage] = useState(1);
   const [statisticsRetry, setStatisticsRetry] = useState({});
   const [statistics, setStatistics] = useState({});
   const [pages, setPages] = useState({
@@ -138,9 +137,6 @@ const App = () => {
     page1: {
       link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
       repositories: [],
-    },
-    page15: {
-      link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos?page=15`,
     },
   });
 
