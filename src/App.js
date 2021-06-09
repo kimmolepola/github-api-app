@@ -193,8 +193,8 @@ const App = () => {
           <Typography>Created at: {x.created_at}</Typography>
           <Typography>Updated at: {x.updated_at}</Typography>
           <Typography variant="subtitle1" style={{ marginTop: 5 }}>Most commits</Typography>
-          { statistics[x.id]
-            ? statistics[x.id].slice(0, 3).map((xx) => (
+          { statistics[x.name]
+            ? statistics[x.name].slice(0, 3).map((xx) => (
               <Typography key={xx.login}>{xx.login}: {xx.total}</Typography>
             ))
             : null }
