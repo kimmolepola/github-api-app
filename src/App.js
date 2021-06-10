@@ -180,20 +180,66 @@ const handleNewPage = async ({
   }
 };
 
-const Row = ({ row }) => {
+const TopCommiters = ({ row, statistics }) => {
+  if (!statistics || !statistics[row.name]) {
+    return null;
+  }
+  return (
+    <>
+      {statistics[row.name].slice(0, 3).map((x) => {
+        if (x.avatar_url) {
+          return (
+            <img
+              style={{ borderStyle: 'none', borderRadius: '50%' }}
+              alt="avatar_url"
+              width="30"
+              height="30"
+              src={x.avatar_url}
+            />
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+};
+
+const Row = ({ row, statistics }) => {
   const [open, setOpen] = useState(false);
 
   const classes = useRowStyles();
 
   const zrow = { history: [] };
 
+  const avatarUrl = statistics
+    ? statistics[row.name]
+      ? statistics[row.name][0]
+        ? statistics[row.name][0].avatar_url
+          ? statistics[row.name][0].avatar_url
+          : null
+        : null
+      : null
+    : null;
+
+  /*
+  <img
+  style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }}
+  alt="avatar_url"
+  width="50"
+  height="50"
+  src={statistics[row.name][0].avatar_url}
+/>
+*/
+
   return (
     <>
       <TableRow className={classes.root}>
         <TableCell component="th" scope="row">
-          {row.name}
+          <a href={row.html_url}>{row.name}</a>
         </TableCell>
-        <TableCell>commiter x</TableCell>
+        <TableCell>
+          <TopCommiters row={row} statistics={statistics} />
+        </TableCell>
         <TableCell>{row.language}</TableCell>
         <TableCell align="right">{timeDifference(Date.now(), new Date(row.updated_at).getTime())}</TableCell>
         <TableCell>
@@ -242,7 +288,7 @@ const Row = ({ row }) => {
   );
 };
 
-const CollapsibleTable = ({ rows, xRows }) => (
+const CollapsibleTable = ({ rows, xRows, statistics }) => (
   <TableContainer>
     <Table aria-label="collapsible table">
       <TableHead>
@@ -256,7 +302,7 @@ const CollapsibleTable = ({ rows, xRows }) => (
       </TableHead>
       <TableBody>
         {xRows.map((row) => (
-          <Row key={row.name} row={row} />
+          <Row key={row.name} row={row} statistics={statistics} />
         ))}
       </TableBody>
     </Table>
@@ -368,7 +414,7 @@ const App = () => {
           <IconButton><AppsIcon /></IconButton>
         </div>
         <div style={{ maxWidth: 1000, margin: 20 }}>
-          <CollapsibleTable rows={rows} xRows={xRows} />
+          <CollapsibleTable rows={rows} xRows={xRows} statistics={statistics} />
         </div>
         {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
           <Paper
