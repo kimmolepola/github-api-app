@@ -1,6 +1,13 @@
 import { unstable_createMuiStrictModeTheme as createMuiTheme } from '@material-ui/core/styles';
 
 export default createMuiTheme({
+  palette: {
+    primary: { main: '#f04e30' },
+    secondary: { main: '#f6f5f5' },
+    text: {
+      primary: '#595858',
+    },
+  },
   typography: {
     fontFamily: [
       '-apple-system',
@@ -15,8 +22,8 @@ export default createMuiTheme({
       '"Segoe UI Symbol"',
     ].join(','),
     fontSize: 14,
-    fontWeightLight: 500,
-    fontWeightRegular: 600,
-    fontWeightMedium: 700,
+    fontWeightLight: 350,
+    fontWeightRegular: 400,
+    fontWeightMedium: 600,
   },
 });

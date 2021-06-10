@@ -1,11 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { ThemeProvider } from '@material-ui/core/styles';
+import { makeStyles, ThemeProvider } from '@material-ui/core/styles';
 import {
-  Typography, Card, Paper, InputLabel, FormControl, Select, MenuItem, CssBaseline,
+  TableContainer,
+  TableBody,
+  Collapse,
+  Box,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  IconButton,
+  CssBaseline,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Typography,
+  Paper,
 } from '@material-ui/core';
 import parseLink from 'parse-link-header';
+import {
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  Apps as AppsIcon,
+  List as ListIcon,
+} from '@material-ui/icons';
 import theme from './theme';
+import timeDifference from './timeDifference';
+
+const useRowStyles = makeStyles({
+  root: {
+    '& > *': {
+      borderBottom: 'unset',
+    },
+  },
+});
 
 const trimStatistics = (result) => {
   let trimmed;
@@ -150,7 +180,112 @@ const handleNewPage = async ({
   }
 };
 
+const Row = ({ row }) => {
+  const [open, setOpen] = useState(false);
+
+  const classes = useRowStyles();
+
+  const zrow = { history: [] };
+
+  return (
+    <>
+      <TableRow className={classes.root}>
+        <TableCell component="th" scope="row">
+          {row.name}
+        </TableCell>
+        <TableCell>commiter x</TableCell>
+        <TableCell>{row.language}</TableCell>
+        <TableCell align="right">{timeDifference(Date.now(), new Date(row.updated_at).getTime())}</TableCell>
+        <TableCell>
+          <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
+            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          </IconButton>
+        </TableCell>
+
+      </TableRow>
+      <TableRow>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <Box margin={1}>
+              <Typography variant="h6" gutterBottom component="div">
+                Asdf
+              </Typography>
+              <Table size="small" aria-label="purchases">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>asdf</TableCell>
+                    <TableCell>asdf</TableCell>
+                    <TableCell align="right">asdf</TableCell>
+                    <TableCell align="right">asdf</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {zrow.history.map((historyRow) => (
+                    <TableRow key={historyRow.date}>
+                      <TableCell component="th" scope="row">
+                        {historyRow.date}
+                      </TableCell>
+                      <TableCell>{historyRow.customerId}</TableCell>
+                      <TableCell align="right">{historyRow.amount}</TableCell>
+                      <TableCell align="right">
+                        {Math.round(historyRow.amount * row.price * 100) / 100}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+    </>
+  );
+};
+
+const CollapsibleTable = ({ rows, xRows }) => (
+  <TableContainer>
+    <Table aria-label="collapsible table">
+      <TableHead>
+        <TableRow>
+          <TableCell>Repository name</TableCell>
+          <TableCell>Top commiters</TableCell>
+          <TableCell>Language</TableCell>
+          <TableCell align="right">Date updated</TableCell>
+          <TableCell />
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {xRows.map((row) => (
+          <Row key={row.name} row={row} />
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+function createData(name, calories, fat, carbs, protein) {
+  return {
+    name,
+    calories,
+    fat,
+    carbs,
+    protein,
+    history: [
+      { date: '2020-01-05', customerId: '11091700', amount: 3 },
+      { date: '2020-01-02', customerId: 'Anonymous', amount: 1 },
+    ],
+  };
+}
+
 const App = () => {
+  const rows = [
+    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
+    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
+    createData('Eclair', 262, 16.0, 24, 6.0),
+    createData('Cupcake', 305, 3.7, 67, 4.3),
+    createData('Gingerbread', 356, 16.0, 49, 3.9),
+  ];
+
   const [timePeriodSelect, setTimePeriodSelect] = useState({});
   const [retryTimer, setRetryTimer] = useState(null);
   const [retry, setRetry] = useState(false);
@@ -204,26 +339,37 @@ const App = () => {
     })();
   }, [statisticsRetry, retry]);
 
+  const xRows = pages[`page${activePage}`] ? pages[`page${activePage}`].repositories : null;
+  console.log('xRows: ', xRows);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <div style={{
-        background: 'red', padding: 15,
+        background: theme.palette.primary.main, padding: 15,
       }}
       >
         <Typography
+          color="secondary"
           variant="subtitle1"
           style={{
-            marginLeft: 20, color: 'white',
+            marginLeft: 20, fontWeight: 'bold',
           }}
         >
           Github API App
         </Typography>
       </div>
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'white',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}
       >
+        <div style={{ alignSelf: 'flex-end', display: 'flex' }}>
+          <IconButton><ListIcon /></IconButton>
+          <IconButton><AppsIcon /></IconButton>
+        </div>
+        <div style={{ maxWidth: 1000, margin: 20 }}>
+          <CollapsibleTable rows={rows} xRows={xRows} />
+        </div>
         {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
           <Paper
             key={x.id}
