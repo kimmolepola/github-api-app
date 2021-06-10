@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { makeStyles, ThemeProvider } from '@material-ui/core/styles';
+import { Pagination, AvatarGroup } from '@material-ui/lab';
 import {
+  TableSortLabel,
+  Avatar,
   TableContainer,
   TableBody,
   Collapse,
@@ -21,6 +24,7 @@ import {
 } from '@material-ui/core';
 import parseLink from 'parse-link-header';
 import {
+  ArrowDropDown as ArrowDropDownIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   Apps as AppsIcon,
@@ -94,13 +98,12 @@ const handleStatistics = async ({
           x.statistics.data.forEach((xx) => {
             newTimePeriodSelect[xx.author.login] = 0; // dropdown menu initial state
           });
-          newStatistics[x.repositoryName] = trimStatistics(x.statistics)
-            .sort((xx, yy) => yy.total - xx.total);
+          newStatistics[x.repositoryName] = x.statistics.data.sort((xx, yy) => yy.total - xx.total);
           delete newStatisticsRetry[x.repositoryName];
         }
         if (x.statistics.status === 202) {
           if (newStatisticsRetry[x.repositoryName] || newStatisticsRetry[x.repositoryName] === 0) {
-            if (newStatisticsRetry[x.repositoryName] > 2) { // if tried to fetch three times already
+            if (newStatisticsRetry[x.repositoryName] > 4) { // if tried to fetch five times already
               delete newStatisticsRetry[x.repositoryName]; // don't try to fetch anymore
             } else {
               newStatisticsRetry[x.repositoryName] += 1; // increase fetch count
@@ -139,11 +142,20 @@ const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
   return newPagesObject;
 };
 
-const fetchRepositories = async ({ link }) => {
+const fetchRepositories = async ({ itemsPerPage, sort, link }) => {
   try {
     return await axios.get(
       link,
-      { headers: { Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}` } },
+      {
+        params: {
+          per_page: itemsPerPage,
+          sort: sort.sortBy === 'name' ? 'full_name' : 'updated',
+          direction: sort.direction,
+        },
+        headers: {
+          Authorization: `Bearer ${process.env.REACT_APP_GITHUB_ACCESS_TOKEN}`,
+        },
+      },
     );
   } catch (error) {
     console.error(error);
@@ -152,6 +164,8 @@ const fetchRepositories = async ({ link }) => {
 };
 
 const handleNewPage = async ({
+  itemsPerPage,
+  sort,
   page,
   pages,
   setPages,
@@ -163,7 +177,7 @@ const handleNewPage = async ({
   setTimePeriodSelect,
 }) => {
   if (pages[`page${page}`] && pages[`page${page}`].link) {
-    const result = await fetchRepositories({ link: pages[`page${page}`].link });
+    const result = await fetchRepositories({ itemsPerPage, sort, link: pages[`page${page}`].link });
     if (result) {
       const newPagesObject = createNewPagesObject({ pages, page, repositoriesFetchResult: result });
       setPages(newPagesObject);
@@ -181,27 +195,21 @@ const handleNewPage = async ({
 };
 
 const TopCommiters = ({ row, statistics }) => {
-  if (!statistics || !statistics[row.name]) {
-    return null;
+  if (statistics && statistics[row.name]) {
+    return (
+      <div style={{ display: 'flex' }}>
+        {statistics[row.name].slice(0, 3).map((x) => {
+          if (x.author && x.author.avatar_url) {
+            return (
+              <Avatar key={row.name.concat(x.author.login)} alt="avatar" style={{ width: 30, height: 30, marginRight: 1 }} src={x.author.avatar_url} />
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
   }
-  return (
-    <>
-      {statistics[row.name].slice(0, 3).map((x) => {
-        if (x.avatar_url) {
-          return (
-            <img
-              style={{ borderStyle: 'none', borderRadius: '50%' }}
-              alt="avatar_url"
-              width="30"
-              height="30"
-              src={x.avatar_url}
-            />
-          );
-        }
-        return null;
-      })}
-    </>
-  );
+  return null;
 };
 
 const Row = ({ row, statistics }) => {
@@ -211,31 +219,11 @@ const Row = ({ row, statistics }) => {
 
   const zrow = { history: [] };
 
-  const avatarUrl = statistics
-    ? statistics[row.name]
-      ? statistics[row.name][0]
-        ? statistics[row.name][0].avatar_url
-          ? statistics[row.name][0].avatar_url
-          : null
-        : null
-      : null
-    : null;
-
-  /*
-  <img
-  style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }}
-  alt="avatar_url"
-  width="50"
-  height="50"
-  src={statistics[row.name][0].avatar_url}
-/>
-*/
-
   return (
     <>
       <TableRow className={classes.root}>
         <TableCell component="th" scope="row">
-          <a href={row.html_url}>{row.name}</a>
+          {row.name}
         </TableCell>
         <TableCell>
           <TopCommiters row={row} statistics={statistics} />
@@ -288,20 +276,38 @@ const Row = ({ row, statistics }) => {
   );
 };
 
-const CollapsibleTable = ({ rows, xRows, statistics }) => (
+const CollapsibleTable = ({
+  handleSortRequest, sort, rows, statistics,
+}) => (
   <TableContainer>
     <Table aria-label="collapsible table">
       <TableHead>
         <TableRow>
-          <TableCell>Repository name</TableCell>
+          <TableCell sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
+            <TableSortLabel
+              active={sort.sortBy === 'name'}
+              direction={sort.sortBy === 'name' ? sort.direction : 'asc'}
+              onClick={() => handleSortRequest('name')}
+            >
+              Repository name
+            </TableSortLabel>
+          </TableCell>
           <TableCell>Top commiters</TableCell>
           <TableCell>Language</TableCell>
-          <TableCell align="right">Date updated</TableCell>
+          <TableCell align="right" sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
+            <TableSortLabel
+              active={sort.sortBy === 'updated'}
+              direction={sort.sortBy === 'updated' ? sort.direction : 'desc'}
+              onClick={() => handleSortRequest('updated')}
+            >
+              Date updated
+            </TableSortLabel>
+          </TableCell>
           <TableCell />
         </TableRow>
       </TableHead>
       <TableBody>
-        {xRows.map((row) => (
+        {rows.map((row) => (
           <Row key={row.name} row={row} statistics={statistics} />
         ))}
       </TableBody>
@@ -309,46 +315,53 @@ const CollapsibleTable = ({ rows, xRows, statistics }) => (
   </TableContainer>
 );
 
-function createData(name, calories, fat, carbs, protein) {
-  return {
-    name,
-    calories,
-    fat,
-    carbs,
-    protein,
-    history: [
-      { date: '2020-01-05', customerId: '11091700', amount: 3 },
-      { date: '2020-01-02', customerId: 'Anonymous', amount: 1 },
-    ],
-  };
-}
+const countSiblings = ({ activePage, pages }) => {
+  const maxSiblingDistance = 2;
+  let siblingDistance = 0;
+  for (let i = 0; i < maxSiblingDistance; i += 1) {
+    if (pages[`page${activePage + i + 1}`] && (pages[`page${activePage - i - 1}`] || activePage - i - 1 < 1)) {
+      siblingDistance += 1;
+    } else {
+      break;
+    }
+  }
+  console.log('sibling distance: ', siblingDistance);
+  return siblingDistance;
+};
 
 const App = () => {
-  const rows = [
-    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData('Eclair', 262, 16.0, 24, 6.0),
-    createData('Cupcake', 305, 3.7, 67, 4.3),
-    createData('Gingerbread', 356, 16.0, 49, 3.9),
-  ];
-
-  const [timePeriodSelect, setTimePeriodSelect] = useState({});
-  const [retryTimer, setRetryTimer] = useState(null);
-  const [retry, setRetry] = useState(false);
-  const [activePage, setActivePage] = useState(1);
-  const [statisticsRetry, setStatisticsRetry] = useState({});
-  const [statistics, setStatistics] = useState({});
-  const [pages, setPages] = useState({
+  const initialPages = {
     first: 1,
     last: undefined,
     page1: {
       link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
       repositories: [],
     },
-  });
+  };
+
+  const [updateSpinner, setUpdateSpinner] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState('5');
+  const [sort, setSort] = useState({ sortBy: 'name', direction: 'asc' });
+  const [timePeriodSelect, setTimePeriodSelect] = useState({});
+  const [retryTimer, setRetryTimer] = useState(null);
+  const [retry, setRetry] = useState(false);
+  const [activePage, setActivePage] = useState(1);
+  const [statisticsRetry, setStatisticsRetry] = useState({});
+  const [statistics, setStatistics] = useState({});
+  const [pages, setPages] = useState(initialPages);
+
+  useEffect(() => {
+    (() => {
+      setPages(initialPages);
+      setActivePage(1);
+      setUpdateSpinner(!updateSpinner);
+    })();
+  }, [itemsPerPage, sort]);
 
   useEffect(() => {
     handleNewPage({
+      itemsPerPage,
+      sort,
       page: activePage,
       pages,
       setPages,
@@ -359,12 +372,12 @@ const App = () => {
       timePeriodSelect,
       setTimePeriodSelect,
     });
-  }, [activePage]);
+  }, [activePage, updateSpinner]);
 
   useEffect(() => {
     (() => {
       if (Object.keys(statisticsRetry).length && !retryTimer) {
-        const timer = setInterval(() => { setRetry(true); }, 3000);
+        const timer = setInterval(() => { setRetry(true); }, 5000);
         setRetryTimer(timer);
       }
       if (Object.keys(statisticsRetry).length === 0 && retryTimer) {
@@ -385,8 +398,33 @@ const App = () => {
     })();
   }, [statisticsRetry, retry]);
 
-  const xRows = pages[`page${activePage}`] ? pages[`page${activePage}`].repositories : null;
-  console.log('xRows: ', xRows);
+  const handleSortRequest = (cell) => {
+    if (cell === 'name') {
+      if (sort.sortBy === 'name') {
+        setSort({
+          sortBy: 'name',
+          direction: sort.direction === 'asc' ? 'desc' : 'asc',
+        });
+      } else {
+        setSort({
+          sortBy: 'name',
+          direction: 'asc',
+        });
+      }
+    } else if (sort.sortBy === 'name') {
+      setSort({
+        sortBy: 'updated',
+        direction: 'desc',
+      });
+    } else {
+      setSort({
+        sortBy: 'updated',
+        direction: sort.direction === 'asc' ? 'desc' : 'asc',
+      });
+    }
+  };
+
+  const rows = pages[`page${activePage}`] ? pages[`page${activePage}`].repositories : null;
 
   return (
     <ThemeProvider theme={theme}>
@@ -413,58 +451,96 @@ const App = () => {
           <IconButton><ListIcon /></IconButton>
           <IconButton><AppsIcon /></IconButton>
         </div>
-        <div style={{ maxWidth: 1000, margin: 20 }}>
-          <CollapsibleTable rows={rows} xRows={xRows} statistics={statistics} />
+        <div style={{
+          maxWidth: 1000, marginLeft: 20, marginRight: 20, marginBottom: 20,
+        }}
+        >
+          <FormControl size="small" style={{ margin: 5, minWidth: 100 }}>
+            <Select
+              disableUnderline
+              style={{ fontSize: 12 }}
+              renderValue={() => `Items per page: ${itemsPerPage}`}
+              labelId="items-label"
+              id="items"
+              value={itemsPerPage}
+              onChange={(x) => setItemsPerPage(x.target.value)}
+            >
+              <MenuItem value="5">5</MenuItem>
+              <MenuItem value="10">10</MenuItem>
+              <MenuItem value="30">30</MenuItem>
+              <MenuItem value="100">100</MenuItem>
+            </Select>
+          </FormControl>
+          <CollapsibleTable
+            handleSortRequest={handleSortRequest}
+            sort={sort}
+            rows={rows}
+            statistics={statistics}
+          />
         </div>
-        {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
-          <Paper
-            key={x.id}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 5, padding: 50, background: 'pink',
-            }}
-          >
-            <Typography variant="h6">{x.name}</Typography>
-            <Typography>{x.language}</Typography>
-            <Typography>Stargazers: {x.stargazers_count}</Typography>
-            <Typography>Forks: {x.fork_count}</Typography>
-            <Typography>Created at: {x.created_at}</Typography>
-            <Typography>Updated at: {x.updated_at}</Typography>
-            <Typography variant="subtitle1" style={{ marginTop: 5 }}>Most commits</Typography>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'left' }}>
-              { statistics[x.name]
-                ? statistics[x.name].slice(0, 3).map((xx) => (
-                  <div key={xx.login}>
-                    <div
-                      style={{
-                        display: 'flex', flexDirection: 'row', alignItems: 'center',
-                      }}
-                    >
-                      <img style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }} alt="avatar_url" width="50" height="50" src={xx.avatar_url} />
-                      <Typography>{xx.login}: {xx.total}</Typography>
-                    </div>
-                    <FormControl style={{ margin: 5, minWidth: 120 }}>
-                      <InputLabel id="simple-select-label">Time period</InputLabel>
-                      <Select
-                        labelId="simple-select-label"
-                        id="simple-select"
-                        value={timePeriodSelect[xx.login]}
-                        onChange={(xxx) => setTimePeriodSelect({
-                          ...timePeriodSelect,
-                          [xx.login]: xxx.target.value,
-                        })}
+        <Pagination
+          onChange={(x) => console.log(x.target.value)}
+          showFirstButton
+          showLastButton
+          page={activePage}
+          boundaryCount={1}
+          siblingCount={1}
+          count={10}
+          variant="outlined"
+          color="primary"
+        />
+
+        <div style={{ display: 'none' }}>
+          {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
+            <Paper
+              key={x.id}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 5, padding: 50, background: 'pink',
+              }}
+            >
+              <Typography variant="h6">{x.name}</Typography>
+              <Typography>{x.language}</Typography>
+              <Typography>Stargazers: {x.stargazers_count}</Typography>
+              <Typography>Forks: {x.fork_count}</Typography>
+              <Typography>Created at: {x.created_at}</Typography>
+              <Typography>Updated at: {x.updated_at}</Typography>
+              <Typography variant="subtitle1" style={{ marginTop: 5 }}>Most commits</Typography>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'left' }}>
+                { statistics[x.name]
+                  ? statistics[x.name].slice(0, 3).map((xx) => (
+                    <div key={xx.author.login}>
+                      <div
+                        style={{
+                          display: 'flex', flexDirection: 'row', alignItems: 'center',
+                        }}
                       >
-                        <MenuItem value={0}>Zero</MenuItem>
-                        <MenuItem value={10}>Ten</MenuItem>
-                        <MenuItem value={20}>Twenty</MenuItem>
-                        <MenuItem value={30}>Thirty</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </div>
-                ))
-                : null }
-            </div>
-          </Paper>
-        )) : null : null}
+                        <img style={{ borderStyle: 'none', borderRadius: '50%', margin: 5 }} alt="avatar_url" width="50" height="50" src={xx.avatar_url} />
+                        <Typography>{xx.author.login}: {xx.total}</Typography>
+                      </div>
+                      <FormControl style={{ margin: 5, minWidth: 120 }}>
+                        <InputLabel id="simple-select-label">Time period</InputLabel>
+                        <Select
+                          labelId="simple-select-label"
+                          id="simple-select"
+                          value={timePeriodSelect[xx.author.login]}
+                          onChange={(xxx) => setTimePeriodSelect({
+                            ...timePeriodSelect,
+                            [xx.author.login]: xxx.target.value,
+                          })}
+                        >
+                          <MenuItem value={0}>Zero</MenuItem>
+                          <MenuItem value={10}>Ten</MenuItem>
+                          <MenuItem value={20}>Twenty</MenuItem>
+                          <MenuItem value={30}>Thirty</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                  ))
+                  : null }
+              </div>
+            </Paper>
+          )) : null : null}
+        </div>
       </div>
     </ThemeProvider>
   );
