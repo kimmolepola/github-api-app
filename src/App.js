@@ -234,7 +234,7 @@ const TopCommiters = ({ row, statistics, amount }) => {
   return null;
 };
 
-const Row = ({ row, statistics }) => {
+const Row = ({ isMobile, row, statistics }) => {
   const [open, setOpen] = useState(false);
 
   const classes = useRowStyles();
@@ -248,7 +248,7 @@ const Row = ({ row, statistics }) => {
         <TableCell>
           <TopCommiters row={row} statistics={statistics} amount={3} />
         </TableCell>
-        <TableCell>{row.language}</TableCell>
+        <TableCell style={{ display: isMobile ? 'none' : '' }}>{row.language}</TableCell>
         <TableCell align="right">{timeDifference(Date.now(), new Date(row.updated_at).getTime())}</TableCell>
         <TableCell>
           <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
@@ -374,6 +374,7 @@ const rowCount = ({
 };
 
 const CollapsibleTable = ({
+  isMobile,
   pages,
   activePage,
   setActivePage,
@@ -398,7 +399,7 @@ const CollapsibleTable = ({
             </TableSortLabel>
           </TableCell>
           <TableCell>Top commiters</TableCell>
-          <TableCell>Language</TableCell>
+          <TableCell style={{ display: isMobile ? 'none' : '' }}>Language</TableCell>
           <TableCell align="right" sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
             <TableSortLabel
               active={sort.sortBy === 'updated'}
@@ -413,7 +414,7 @@ const CollapsibleTable = ({
       </TableHead>
       <TableBody>
         {rows ? rows.map((row) => (
-          <Row key={row.name} row={row} statistics={statistics} />
+          <Row key={row.name} isMobile={isMobile} row={row} statistics={statistics} />
         )) : null}
       </TableBody>
       <TableFooter>
@@ -478,6 +479,7 @@ const App = () => {
     },
   };
 
+  const [width, setWidth] = useState(window.innerWidth);
   const [viewMode, setViewMode] = useState('rows');
   const [updateSpinner, setUpdateSpinner] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -489,6 +491,15 @@ const App = () => {
   const [statisticsRetry, setStatisticsRetry] = useState({});
   const [statistics, setStatistics] = useState({});
   const [pages, setPages] = useState(initialPages);
+
+  useEffect(() => {
+    window.addEventListener('resize', () => setWidth(window.innerWidth));
+    return () => {
+      window.removeEventListener('resize', () => setWidth(window.innerWidth));
+    };
+  }, []);
+
+  const isMobile = width <= 768;
 
   useEffect(() => {
     (() => {
@@ -592,10 +603,11 @@ const App = () => {
           <IconButton onClick={() => setViewMode('boxes')}><AppsIcon color={viewMode === 'boxes' ? 'primary' : 'action'} /></IconButton>
         </div>
         <div style={{
-          display: viewMode === 'rows' ? '' : 'none', maxWidth: 1000, marginLeft: 20, marginRight: 20, marginBottom: 20,
+          display: viewMode === 'rows' ? '' : 'none', maxWidth: 1000,
         }}
         >
           <CollapsibleTable
+            isMobile={isMobile}
             pages={pages}
             activePage={activePage}
             setActivePage={setActivePage}
@@ -630,7 +642,7 @@ const App = () => {
                 </Select>
               </FormControl>
             </div>
-            <GridList spacing={30} cellHeight="auto" cols={3}>
+            <GridList spacing={30} cellHeight="auto" cols={isMobile ? 1 : 3}>
               {pages[`page${activePage}`]
                 ? pages[`page${activePage}`].repositories
                   ? pages[`page${activePage}`].repositories.map((x) => (
