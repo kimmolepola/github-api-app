@@ -20,14 +20,14 @@ const timeDifference = (current, previous) => {
   }
 
   if (elapsed < msPerMonth) {
-    return `approximately ${Math.round(elapsed / msPerDay)} days ago`;
+    return `${Math.round(elapsed / msPerDay)} days ago`;
   }
 
   if (elapsed < msPerYear) {
-    return `approximately ${Math.round(elapsed / msPerMonth)} months ago`;
+    return `${Math.round(elapsed / msPerMonth)} months ago`;
   }
 
-  return `approximately ${Math.round(elapsed / msPerYear)} years ago`;
+  return `${Math.round(elapsed / msPerYear)} years ago`;
 };
 
 export default timeDifference;

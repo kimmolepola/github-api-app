@@ -241,7 +241,7 @@ const Row = ({ isMobile, row, statistics }) => {
 
   return (
     <>
-      <TableRow className={classes.root}>
+      <TableRow onClick={() => (isMobile ? setOpen(!open) : null)} className={classes.root}>
         <TableCell component="th" scope="row">
           {row.name}
         </TableCell>
@@ -250,7 +250,7 @@ const Row = ({ isMobile, row, statistics }) => {
         </TableCell>
         <TableCell style={{ display: isMobile ? 'none' : '' }}>{row.language}</TableCell>
         <TableCell align="right">{timeDifference(Date.now(), new Date(row.updated_at).getTime())}</TableCell>
-        <TableCell>
+        <TableCell style={{ display: isMobile ? 'none' : '' }}>
           <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
@@ -389,7 +389,7 @@ const CollapsibleTable = ({
     <Table aria-label="collapsible table">
       <TableHead>
         <TableRow>
-          <TableCell sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
+          <TableCell style={isMobile ? { width: '1px' } : {}} sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
             <TableSortLabel
               active={sort.sortBy === 'name'}
               direction={sort.sortBy === 'name' ? sort.direction : 'asc'}
@@ -398,9 +398,9 @@ const CollapsibleTable = ({
               Repository name
             </TableSortLabel>
           </TableCell>
-          <TableCell>Top commiters</TableCell>
+          <TableCell style={isMobile ? { width: '1px' } : {}}>Top commiters</TableCell>
           <TableCell style={{ display: isMobile ? 'none' : '' }}>Language</TableCell>
-          <TableCell align="right" sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
+          <TableCell style={isMobile ? { width: '1px' } : {}} align="right" sortDirection={sort.sortBy === 'name' ? sort.direction : false}>
             <TableSortLabel
               active={sort.sortBy === 'updated'}
               direction={sort.sortBy === 'updated' ? sort.direction : 'desc'}
@@ -420,13 +420,14 @@ const CollapsibleTable = ({
       <TableFooter>
         <TableRow>
           <TablePagination
+            style={isMobile ? { width: '1px' } : {}}
             rowsPerPageOptions={[
               5,
               10,
               25,
               maxRowsLabel({ rows, pagesLast: pages.last, rowsPerPage }),
             ]}
-            colSpan={5}
+            colSpan={isMobile ? 3 : 5}
             count={rowCount({
               pagesLast: pages.last, activePage, rowsPerPage, rows,
             })}
