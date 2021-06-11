@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { makeStyles, ThemeProvider } from '@material-ui/core/styles';
-import { Pagination, AvatarGroup } from '@material-ui/lab';
+import { PaginationItem, Pagination, AvatarGroup } from '@material-ui/lab';
 import {
+  Card,
+  GridListTile,
+  GridList,
+  Link,
+  Tooltip,
   TableFooter,
   TablePagination,
   TableSortLabel,
@@ -26,6 +31,10 @@ import {
 } from '@material-ui/core';
 import parseLink from 'parse-link-header';
 import {
+  Home as HomeIcon,
+  Flare as FlareIcon,
+  CallSplit as CallSplitIcon,
+  StarBorder as StarBorderIcon,
   LastPage as LastPageIcon,
   FirstPage as FirstPageIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
@@ -136,7 +145,6 @@ const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
   }
   if (repositoriesFetchResult.headers && repositoriesFetchResult.headers.link) {
     const links = parseLink(repositoriesFetchResult.headers.link);
-    console.log('links: ', links);
     Object.keys(links).forEach((x) => {
       if (x === 'last') {
         newPagesObject.last = links[x].page;
@@ -149,7 +157,7 @@ const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
       }
     });
   } else if (repositoriesFetchResult.headers) {
-    newPagesObject.last = -1;
+    newPagesObject.last = null;
   }
   return newPagesObject;
 };
@@ -190,7 +198,6 @@ const handleNewPage = async ({
 }) => {
   if (pages[`page${page}`] && pages[`page${page}`].link) {
     const result = await fetchRepositories({ itemsPerPage, sort, link: pages[`page${page}`].link });
-    console.log('result: ', result);
     if (result) {
       const newPagesObject = createNewPagesObject({ pages, page, repositoriesFetchResult: result });
       setPages(newPagesObject);
@@ -207,14 +214,16 @@ const handleNewPage = async ({
   }
 };
 
-const TopCommiters = ({ row, statistics }) => {
+const TopCommiters = ({ row, statistics, amount }) => {
   if (statistics && statistics[row.name]) {
     return (
       <div style={{ display: 'flex' }}>
-        {statistics[row.name].slice(0, 3).map((x) => {
+        {statistics[row.name].slice(0, amount).map((x) => {
           if (x.author && x.author.avatar_url) {
             return (
-              <Avatar key={row.name.concat(x.author.login)} alt="avatar" style={{ width: 30, height: 30, marginRight: 1 }} src={x.author.avatar_url} />
+              <Tooltip key={row.name.concat(x.author.login)} title={`${x.author.login}\ncommits: ${x.total}`}>
+                <Avatar alt="avatar" style={{ width: 30, height: 30, marginRight: 1 }} src={x.author.avatar_url} />
+              </Tooltip>
             );
           }
           return null;
@@ -230,8 +239,6 @@ const Row = ({ row, statistics }) => {
 
   const classes = useRowStyles();
 
-  const zrow = { history: [] };
-
   return (
     <>
       <TableRow className={classes.root}>
@@ -239,7 +246,7 @@ const Row = ({ row, statistics }) => {
           {row.name}
         </TableCell>
         <TableCell>
-          <TopCommiters row={row} statistics={statistics} />
+          <TopCommiters row={row} statistics={statistics} amount={3} />
         </TableCell>
         <TableCell>{row.language}</TableCell>
         <TableCell align="right">{timeDifference(Date.now(), new Date(row.updated_at).getTime())}</TableCell>
@@ -253,34 +260,20 @@ const Row = ({ row, statistics }) => {
       <TableRow>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box margin={1}>
-              <Typography variant="h6" gutterBottom component="div">
-                Asdf
-              </Typography>
-              <Table size="small" aria-label="purchases">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>asdf</TableCell>
-                    <TableCell>asdf</TableCell>
-                    <TableCell align="right">asdf</TableCell>
-                    <TableCell align="right">asdf</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {zrow.history.map((historyRow) => (
-                    <TableRow key={historyRow.date}>
-                      <TableCell component="th" scope="row">
-                        {historyRow.date}
-                      </TableCell>
-                      <TableCell>{historyRow.customerId}</TableCell>
-                      <TableCell align="right">{historyRow.amount}</TableCell>
-                      <TableCell align="right">
-                        {Math.round(historyRow.amount * row.price * 100) / 100}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <Box>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+                <StarBorderIcon color="primary" style={{ marginRight: 5 }} /><Typography variant="body2">Stargazers: {row.stargazers_count}</Typography>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+                <CallSplitIcon color="primary" style={{ marginRight: 5 }} /><Typography variant="body2">Forks: {row.fork_count}</Typography>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+                <FlareIcon color="primary" style={{ marginRight: 5 }} /><Typography variant="body2">Created at: {(new Date(row.created_at)).toDateString()}</Typography>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+                <HomeIcon color="primary" style={{ marginRight: 5 }} /><Link href={row.html_url} color="inherit">{row.html_url}</Link>
+              </div>
+
             </Box>
           </Collapse>
         </TableCell>
@@ -349,6 +342,37 @@ const maxRowsLabel = ({ rows, pagesLast, rowsPerPage }) => {
   return pagesLast * rowsPerPage <= 100 ? { label: 'All', value: 100 } : 100;
 };
 
+const labelDisplayedRows = ({
+  from, to, count, pagesLast, activePage,
+}) => {
+  if (!pagesLast || parseInt(pagesLast, 10) === activePage) {
+    return `${from}-${to} of ${count}`;
+  }
+  return `${from}-${to} of about ${count}`;
+};
+
+const rowCount = ({
+  pagesLast, activePage, rowsPerPage, rows,
+}) => {
+  if (!rows || !rows.length) {
+    return 0;
+  }
+  if (!pagesLast) {
+    // no pages, currently loadeded rows assumed as all rows
+    return rows.length;
+  }
+  const lastPageNumber = parseInt(pagesLast, 10);
+  // exact row count is known when last page is loaded
+  if (!Number.isNaN(lastPageNumber)
+  && lastPageNumber === activePage) { // if we are at the last page
+    return (lastPageNumber - 1) * rowsPerPage + rows.length; // exact row count
+  }
+  if (!Number.isNaN(lastPageNumber)) { // if we are not at the last page
+    return lastPageNumber * rowsPerPage; // row count about
+  }
+  return 0;
+};
+
 const CollapsibleTable = ({
   pages,
   activePage,
@@ -394,7 +418,6 @@ const CollapsibleTable = ({
       </TableBody>
       <TableFooter>
         <TableRow>
-          {console.log('last and active: ', pages.last, parseInt(activePage, 10))}
           <TablePagination
             rowsPerPageOptions={[
               5,
@@ -403,21 +426,22 @@ const CollapsibleTable = ({
               maxRowsLabel({ rows, pagesLast: pages.last, rowsPerPage }),
             ]}
             colSpan={5}
-            count={pages.last
-              && pages.last !== -1
-              && parseInt(pages.last, 10) !== activePage
-              ? pages.last * rowsPerPage
-              : rows ? pages.last === -1
-                ? -rows.length
-                : -((pages.last - 1) * rowsPerPage + rows.length)
-                : -1}
+            count={rowCount({
+              pagesLast: pages.last, activePage, rowsPerPage, rows,
+            })}
             rowsPerPage={rowsPerPage}
-            page={activePage - 1}
+            page={rows ? activePage - 1 : 0}
             SelectProps={{
               inputProps: { 'aria-label': 'rows per page' },
               native: true,
             }}
-            labelDisplayedRows={({ from, to, count }) => (Number.isNaN(from) || Number.isNaN(to) || Number.isNaN(count) ? '' : count > 0 ? `${from}-${to} of about ${count}` : `${from}-${-to} of ${-count}`)}
+            labelDisplayedRows={({ from, to, count }) => labelDisplayedRows({
+              from,
+              to,
+              count,
+              pagesLast: pages.last,
+              activePage,
+            })}
             onChangePage={(event, newPage) => setActivePage(newPage + 1)}
             onChangeRowsPerPage={(event) => {
               setRowsPerPage(parseInt(event.target.value, 10));
@@ -441,20 +465,20 @@ const countSiblings = ({ activePage, pages }) => {
       break;
     }
   }
-  console.log('sibling distance: ', siblingDistance);
   return siblingDistance;
 };
 
 const App = () => {
   const initialPages = {
     first: 1,
-    last: undefined,
+    last: null,
     page1: {
       link: `https://api.github.com/orgs/${process.env.REACT_APP_ORGANIZATION}/repos`,
       repositories: [],
     },
   };
 
+  const [viewMode, setViewMode] = useState('rows');
   const [updateSpinner, setUpdateSpinner] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [sort, setSort] = useState({ sortBy: 'name', direction: 'asc' });
@@ -564,29 +588,13 @@ const App = () => {
       }}
       >
         <div style={{ alignSelf: 'flex-end', display: 'flex' }}>
-          <IconButton><ListIcon /></IconButton>
-          <IconButton><AppsIcon /></IconButton>
+          <IconButton onClick={() => setViewMode('rows')}><ListIcon color={viewMode === 'rows' ? 'primary' : 'action'} /></IconButton>
+          <IconButton onClick={() => setViewMode('boxes')}><AppsIcon color={viewMode === 'boxes' ? 'primary' : 'action'} /></IconButton>
         </div>
         <div style={{
-          maxWidth: 1000, marginLeft: 20, marginRight: 20, marginBottom: 20,
+          display: viewMode === 'rows' ? '' : 'none', maxWidth: 1000, marginLeft: 20, marginRight: 20, marginBottom: 20,
         }}
         >
-          <FormControl size="small" style={{ display: 'none', margin: 5, minWidth: 100 }}>
-            <Select
-              disableUnderline
-              style={{ fontSize: 12 }}
-              renderValue={() => `Rows per page: ${rowsPerPage}`}
-              labelId="rows-label"
-              id="rows-select"
-              value={rowsPerPage}
-              onChange={(x) => setRowsPerPage(x.target.value)}
-            >
-              <MenuItem value="5">5</MenuItem>
-              <MenuItem value="10">10</MenuItem>
-              <MenuItem value="25">25</MenuItem>
-              <MenuItem value="100">100</MenuItem>
-            </Select>
-          </FormControl>
           <CollapsibleTable
             pages={pages}
             activePage={activePage}
@@ -599,18 +607,66 @@ const App = () => {
             statistics={statistics}
           />
         </div>
-        <Pagination
-          style={{ display: 'none' }}
-          onChange={(x) => console.log(x.target.value)}
-          showFirstButton
-          showLastButton
-          page={activePage}
-          boundaryCount={1}
-          siblingCount={1}
-          count={10}
-          variant="outlined"
-          color="primary"
-        />
+        <div style={{
+          display: viewMode === 'boxes' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', maxWidth: 1000,
+        }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div>
+              <FormControl size="small" style={{ minWidth: 100 }}>
+                <Select
+                  disableUnderline
+                  style={{ fontSize: 12 }}
+                  renderValue={() => `Items per page: ${rowsPerPage}`}
+                  labelId="rows-label"
+                  id="rows-select"
+                  value={rowsPerPage}
+                  onChange={(x) => setRowsPerPage(x.target.value)}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={25}>25</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                </Select>
+              </FormControl>
+            </div>
+            <GridList spacing={30} cellHeight="auto" cols={3}>
+              {pages[`page${activePage}`]
+                ? pages[`page${activePage}`].repositories
+                  ? pages[`page${activePage}`].repositories.map((x) => (
+                    <GridListTile key={x.name}>
+                      <Card style={{ margin: 5, padding: 20 }}>
+                        <Typography variant="h6">{x.name}</Typography>
+                        <Typography variant="body2">{x.description}</Typography>
+                        <Typography style={{ marginTop: 15 }} variant="subtitle2">Top commiters</Typography>
+                        <div style={{ marginTop: 10 }}>
+                          <TopCommiters row={x} statistics={statistics} amount={7} />
+                        </div>
+                      </Card>
+                    </GridListTile>
+                  )) : <GridListTile /> : <GridListTile />}
+            </GridList>
+          </div>
+          <Pagination
+            style={{ selfAlign: 'center', margin: 30 }}
+            onChange={(event, value) => setActivePage(value)}
+            count={Number.isInteger(parseInt(pages.last, 10))
+              ? parseInt(pages.last, 10)
+              : activePage}
+            page={activePage}
+            variant="outlined"
+            color="primary"
+            showFirstButton
+            showLastButton
+            renderItem={(item) => {
+              const newItem = { ...item };
+              if (!pages[`page${item.page}`]) {
+                newItem.disabled = true;
+              }
+              return <PaginationItem {...newItem} />;
+            }}
+          />
+        </div>
 
         <div style={{ display: 'none' }}>
           {pages[`page${activePage}`] ? pages[`page${activePage}`].repositories ? pages[`page${activePage}`].repositories.map((x) => (
