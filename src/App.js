@@ -3,6 +3,8 @@ import axios from 'axios';
 import { makeStyles, ThemeProvider } from '@material-ui/core/styles';
 import { Pagination, AvatarGroup } from '@material-ui/lab';
 import {
+  TableFooter,
+  TablePagination,
   TableSortLabel,
   Avatar,
   TableContainer,
@@ -24,6 +26,10 @@ import {
 } from '@material-ui/core';
 import parseLink from 'parse-link-header';
 import {
+  LastPage as LastPageIcon,
+  FirstPage as FirstPageIcon,
+  KeyboardArrowRight as KeyboardArrowRightIcon,
+  KeyboardArrowLeft as KeyboardArrowLeftIcon,
   ArrowDropDown as ArrowDropDownIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
@@ -130,7 +136,11 @@ const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
   }
   if (repositoriesFetchResult.headers && repositoriesFetchResult.headers.link) {
     const links = parseLink(repositoriesFetchResult.headers.link);
+    console.log('links: ', links);
     Object.keys(links).forEach((x) => {
+      if (x === 'last') {
+        newPagesObject.last = links[x].page;
+      }
       if (links[x].page) {
         if (!newPagesObject[`page${links[x].page}`]) {
           newPagesObject[`page${links[x].page}`] = {};
@@ -138,6 +148,8 @@ const createNewPagesObject = ({ pages, page, repositoriesFetchResult }) => {
         newPagesObject[`page${links[x].page}`].link = links[x].url;
       }
     });
+  } else if (repositoriesFetchResult.headers) {
+    newPagesObject.last = -1;
   }
   return newPagesObject;
 };
@@ -178,6 +190,7 @@ const handleNewPage = async ({
 }) => {
   if (pages[`page${page}`] && pages[`page${page}`].link) {
     const result = await fetchRepositories({ itemsPerPage, sort, link: pages[`page${page}`].link });
+    console.log('result: ', result);
     if (result) {
       const newPagesObject = createNewPagesObject({ pages, page, repositoriesFetchResult: result });
       setPages(newPagesObject);
@@ -276,8 +289,76 @@ const Row = ({ row, statistics }) => {
   );
 };
 
+const TablePaginationActions = (props) => {
+  const {
+    count, page, rowsPerPage, onChangePage,
+  } = props;
+
+  const handleFirstPageButtonClick = (event) => {
+    onChangePage(event, 0);
+  };
+
+  const handleBackButtonClick = (event) => {
+    onChangePage(event, page - 1);
+  };
+
+  const handleNextButtonClick = (event) => {
+    onChangePage(event, page + 1);
+  };
+
+  const handleLastPageButtonClick = (event) => {
+    onChangePage(event, Math.max(0, Math.ceil(count / rowsPerPage) - 1));
+  };
+
+  return (
+    <div style={{ flexShrink: 0, marginLeft: 15 }}>
+      <IconButton
+        onClick={handleFirstPageButtonClick}
+        disabled={page === 0}
+        aria-label="first page"
+      >
+        <FirstPageIcon />
+      </IconButton>
+      <IconButton onClick={handleBackButtonClick} disabled={page === 0} aria-label="previous page">
+        <KeyboardArrowLeftIcon />
+      </IconButton>
+      <IconButton
+        onClick={handleNextButtonClick}
+        disabled={page >= Math.ceil(count / rowsPerPage) - 1}
+        aria-label="next page"
+      >
+        <KeyboardArrowRightIcon />
+      </IconButton>
+      <IconButton
+        onClick={handleLastPageButtonClick}
+        disabled={page >= Math.ceil(count / rowsPerPage) - 1}
+        aria-label="last page"
+      >
+        <LastPageIcon />
+      </IconButton>
+    </div>
+  );
+};
+
+const maxRowsLabel = ({ rows, pagesLast, rowsPerPage }) => {
+  // If query result includes all rows, page information doesn't exist
+  if (pagesLast === -1) {
+    return { label: 'All', value: 100 };
+  }
+  // If all rows <= 100, say 'All'. Github API query max 100 results.
+  return pagesLast * rowsPerPage <= 100 ? { label: 'All', value: 100 } : 100;
+};
+
 const CollapsibleTable = ({
-  handleSortRequest, sort, rows, statistics,
+  pages,
+  activePage,
+  setActivePage,
+  rowsPerPage,
+  setRowsPerPage,
+  handleSortRequest,
+  sort,
+  rows,
+  statistics,
 }) => (
   <TableContainer>
     <Table aria-label="collapsible table">
@@ -307,10 +388,45 @@ const CollapsibleTable = ({
         </TableRow>
       </TableHead>
       <TableBody>
-        {rows.map((row) => (
+        {rows ? rows.map((row) => (
           <Row key={row.name} row={row} statistics={statistics} />
-        ))}
+        )) : null}
       </TableBody>
+      <TableFooter>
+        <TableRow>
+          {console.log('last and active: ', pages.last, parseInt(activePage, 10))}
+          <TablePagination
+            rowsPerPageOptions={[
+              5,
+              10,
+              25,
+              maxRowsLabel({ rows, pagesLast: pages.last, rowsPerPage }),
+            ]}
+            colSpan={5}
+            count={pages.last
+              && pages.last !== -1
+              && parseInt(pages.last, 10) !== activePage
+              ? pages.last * rowsPerPage
+              : rows ? pages.last === -1
+                ? -rows.length
+                : -((pages.last - 1) * rowsPerPage + rows.length)
+                : -1}
+            rowsPerPage={rowsPerPage}
+            page={activePage - 1}
+            SelectProps={{
+              inputProps: { 'aria-label': 'rows per page' },
+              native: true,
+            }}
+            labelDisplayedRows={({ from, to, count }) => (Number.isNaN(from) || Number.isNaN(to) || Number.isNaN(count) ? '' : count > 0 ? `${from}-${to} of about ${count}` : `${from}-${-to} of ${-count}`)}
+            onChangePage={(event, newPage) => setActivePage(newPage + 1)}
+            onChangeRowsPerPage={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setActivePage(1);
+            }}
+            ActionsComponent={TablePaginationActions}
+          />
+        </TableRow>
+      </TableFooter>
     </Table>
   </TableContainer>
 );
@@ -340,7 +456,7 @@ const App = () => {
   };
 
   const [updateSpinner, setUpdateSpinner] = useState(false);
-  const [itemsPerPage, setItemsPerPage] = useState('5');
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [sort, setSort] = useState({ sortBy: 'name', direction: 'asc' });
   const [timePeriodSelect, setTimePeriodSelect] = useState({});
   const [retryTimer, setRetryTimer] = useState(null);
@@ -356,11 +472,11 @@ const App = () => {
       setActivePage(1);
       setUpdateSpinner(!updateSpinner);
     })();
-  }, [itemsPerPage, sort]);
+  }, [rowsPerPage, sort]);
 
   useEffect(() => {
     handleNewPage({
-      itemsPerPage,
+      itemsPerPage: rowsPerPage,
       sort,
       page: activePage,
       pages,
@@ -455,23 +571,28 @@ const App = () => {
           maxWidth: 1000, marginLeft: 20, marginRight: 20, marginBottom: 20,
         }}
         >
-          <FormControl size="small" style={{ margin: 5, minWidth: 100 }}>
+          <FormControl size="small" style={{ display: 'none', margin: 5, minWidth: 100 }}>
             <Select
               disableUnderline
               style={{ fontSize: 12 }}
-              renderValue={() => `Items per page: ${itemsPerPage}`}
-              labelId="items-label"
-              id="items"
-              value={itemsPerPage}
-              onChange={(x) => setItemsPerPage(x.target.value)}
+              renderValue={() => `Rows per page: ${rowsPerPage}`}
+              labelId="rows-label"
+              id="rows-select"
+              value={rowsPerPage}
+              onChange={(x) => setRowsPerPage(x.target.value)}
             >
               <MenuItem value="5">5</MenuItem>
               <MenuItem value="10">10</MenuItem>
-              <MenuItem value="30">30</MenuItem>
+              <MenuItem value="25">25</MenuItem>
               <MenuItem value="100">100</MenuItem>
             </Select>
           </FormControl>
           <CollapsibleTable
+            pages={pages}
+            activePage={activePage}
+            setActivePage={setActivePage}
+            rowsPerPage={rowsPerPage}
+            setRowsPerPage={setRowsPerPage}
             handleSortRequest={handleSortRequest}
             sort={sort}
             rows={rows}
@@ -479,6 +600,7 @@ const App = () => {
           />
         </div>
         <Pagination
+          style={{ display: 'none' }}
           onChange={(x) => console.log(x.target.value)}
           showFirstButton
           showLastButton
