@@ -3,6 +3,7 @@ import axios from 'axios';
 import { makeStyles, ThemeProvider } from '@material-ui/core/styles';
 import { PaginationItem, Pagination, AvatarGroup } from '@material-ui/lab';
 import {
+  Grid,
   Card,
   GridListTile,
   GridList,
@@ -221,8 +222,13 @@ const TopCommiters = ({ row, statistics, amount }) => {
         {statistics[row.name].slice(0, amount).map((x) => {
           if (x.author && x.author.avatar_url) {
             return (
-              <Tooltip key={row.name.concat(x.author.login)} title={`${x.author.login}\ncommits: ${x.total}`}>
-                <Avatar alt="avatar" style={{ width: 30, height: 30, marginRight: 1 }} src={x.author.avatar_url} />
+              <Tooltip
+                key={row.name.concat(x.author.login)}
+                title={`${x.author.login} commits: ${x.total}`}
+              >
+                <Link rel="noopener noreferrer" target="_blank" href={x.author.html_url}>
+                  <Avatar alt="avatar" style={{ width: 30, height: 30, marginRight: 1 }} src={x.author.avatar_url} />
+                </Link>
               </Tooltip>
             );
           }
@@ -624,8 +630,8 @@ const App = () => {
           display: viewMode === 'boxes' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', maxWidth: 1000,
         }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div>
+          <div style={{ display: 'flex', flexDirection: 'column', margin: 30 }}>
+            <div style={{ marginBottom: 10 }}>
               <FormControl size="small" style={{ minWidth: 100 }}>
                 <Select
                   disableUnderline
@@ -643,12 +649,12 @@ const App = () => {
                 </Select>
               </FormControl>
             </div>
-            <GridList spacing={30} cellHeight="auto" cols={isMobile ? 1 : 3}>
+            <Grid container spacing={4}>
               {pages[`page${activePage}`]
                 ? pages[`page${activePage}`].repositories
                   ? pages[`page${activePage}`].repositories.map((x) => (
-                    <GridListTile key={x.name}>
-                      <Card style={{ margin: 5, padding: 20 }}>
+                    <Grid xs={12} sm={6} md={4} item key={x.name} style={{ display: 'flex' }}>
+                      <Card style={{ flex: 1, padding: 15 }}>
                         <Typography variant="h6">{x.name}</Typography>
                         <Typography variant="body2">{x.description}</Typography>
                         <Typography style={{ marginTop: 15 }} variant="subtitle2">Top commiters</Typography>
@@ -656,9 +662,9 @@ const App = () => {
                           <TopCommiters row={x} statistics={statistics} amount={7} />
                         </div>
                       </Card>
-                    </GridListTile>
-                  )) : <GridListTile /> : <GridListTile />}
-            </GridList>
+                    </Grid>
+                  )) : <Grid /> : <Grid /> }
+            </Grid>
           </div>
           <Pagination
             style={{ selfAlign: 'center', margin: 30 }}
