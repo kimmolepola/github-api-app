@@ -5,6 +5,7 @@ const fetchRepositories = async ({ itemsPerPage, sort, link }) => {
     return await axios.get(
       link,
       {
+        timeout: 15000,
         params: {
           per_page: itemsPerPage,
           sort: sort.sortBy === 'name' ? 'full_name' : 'updated',
