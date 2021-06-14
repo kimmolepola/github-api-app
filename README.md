@@ -1,4 +1,4 @@
-# Frontend interview assignment: GitHub API App
+Frontend interview assignment: GitHub API App
 
 ## How to use
 
