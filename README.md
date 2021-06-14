@@ -1,4 +1,4 @@
-# GitHub API App
+# Frontend interview assignment: GitHub API App
 
 ## How to use
 
@@ -42,3 +42,28 @@ Axios
 
 Material-UI
 - Material-UI is a popular JavaScript library for building React applications implementing Material Design. I chose it because because I'm familiar with it and it makes it easy to build good responsive UIs.
+
+# Frontend interview assignment
+
+Suomeksi
+
+Suunittele ja toteuta valitsemillasi web- tai mobiiliteknologioilla sovellus, joka Githubin avointa APIa hyödyntäen visualisoi Vincitin tilin alta löytyvät repositoryt ja niiden aktiivisimmat kommitoijat.
+
+Valmista sovellusta tullaan arviomaan kaikilla osa-alueilla niin visuaalisesti kuin arkkitehtonisesti. Näytäthän osaamisen niin laajasti kuin pystyt. Visuaalisuutta arvioinnissamme emme oleta designer-tasoista osaamista, vaan ennemminkin meitä kiinnostaa, kuinka hyvin toteutuksessa näkyy kykysi toteuttaa myös vaativampia visuaalisia ratkaisuja. Arkkitehtonisesti kannattaa miettiä, mikä on sopiva tähän ratkaisuun ja miten siihen on päätynyt. Muutama saatesana ei varmaan ole pahitteeksi perustellessasi ratkaisua.
+
+Valmistaudu keskustelemaan toteutuksestasi ja tekemistäsi teknologiavalinnoista.
+
+In English
+
+Design and implement with your chosen web- or mobile-technologies an application, which by using Github's open API visualizes repositories found under Vincit's account and the most active commiters there.
+
+Application will be evaluated from different aspects, from a visual point of view as well as architectural. We encourage you to show your 
+capabilities as widely as you can. We are not expecting designer-level competence, but are interested to see how well you could solve even more demanding visual problems. It would also be nice to include a short description or readme-file about your solution. 
+
+Be prepared to discuss your implementation and chosen technologies.
+
+
+#### Linkit/Links
+
+* [https://developer.github.com/v3/](https://developer.github.com/v3/)
+* [https://github.com/Vincit](https://github.com/Vincit)
