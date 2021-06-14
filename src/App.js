@@ -26,7 +26,7 @@ const App = () => {
   };
 
   const [width, setWidth] = useState(window.innerWidth);
-  const [viewMode, setViewMode] = useState('rows');
+  const [viewMode, setViewMode] = useState('table');
   const [updateSpinner, setUpdateSpinner] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [sort, setSort] = useState({ sortBy: 'name', direction: 'asc' });
@@ -154,17 +154,17 @@ const App = () => {
         }}
         >
           <div style={{ alignSelf: 'flex-end', display: 'flex' }}>
-            <IconButton onClick={() => setViewMode('rows')}><ListIcon color={viewMode === 'rows' ? 'primary' : 'action'} /></IconButton>
-            <IconButton onClick={() => setViewMode('boxes')}><AppsIcon color={viewMode === 'boxes' ? 'primary' : 'action'} /></IconButton>
+            <IconButton onClick={() => setViewMode('table')}><ListIcon color={viewMode === 'table' ? 'primary' : 'action'} /></IconButton>
+            <IconButton onClick={() => setViewMode('grid')}><AppsIcon color={viewMode === 'grid' ? 'primary' : 'action'} /></IconButton>
           </div>
           <div style={{
-            display: viewMode === 'rows' ? '' : 'none', maxWidth: 1000,
+            display: viewMode === 'table' ? '' : 'none', maxWidth: 1000,
           }}
           >
             <TableView />
           </div>
           <div style={{
-            display: viewMode === 'boxes' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', maxWidth: 1000,
+            display: viewMode === 'grid' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', maxWidth: 1000,
           }}
           >
             <GridView />
