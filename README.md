@@ -2,11 +2,13 @@
 
 ## How to use
 
-1. Create .env file to root folder with the following content:<br>
+1. npm install
+
+2. Create .env file to root folder with the following content:<br>
    REACT_APP_GITHUB_ACCESS_TOKEN=[GitHub personal access token]<br>
    REACT_APP_ORGANIZATION=vincit
 
-2. npm start
+3. npm start
 
 ## Notes
 This app is only meant as a worksample. The frontend currently exposes the GitHub token to the user on browser, which is not good. Actual production version would need a server between frontend and GitHub API in order to hide the token or other such variables for authentication.
