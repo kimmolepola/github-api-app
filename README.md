@@ -1,70 +1,44 @@
-# Getting Started with Create React App
+# GitHub API App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## How to use
 
-## Available Scripts
+1.
+Create .env file to root folder with the following content:
+REACT_APP_GITHUB_ACCESS_TOKEN=<GitHub personal access token>
+REACT_APP_ORGANIZATION=vincit
 
-In the project directory, you can run:
+2.
+npm start
 
-### `npm start`
+## Notes
+This app is only meant as a worksample. The frontend currently exposes the GitHub token to the user on browser, which is not good. Actual production version would need a server between frontend and GitHub API in order to hide the token or other such variables for authentication.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Architecture
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+The app makes a HTTP GET call to GitHub API to fetch a list of repositories and a subsequent HTTP GET call for each repository on the list to fetch related statistics. The amount of repositories to be fetched at one time is the amount of items the user has selected to be displayed per page. When the user changes page a new set of repositories and related statistics are fetched.
 
-### `npm test`
+Each fetched page is stored in the state. Along with the content of a page the links for the next, previous, the first, and the last page are also received. This link information is stored in the state and used for fetching a new page. For the user, only the page numbers of the pages that have received the link are clickable.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+When the user changes the amount of items to be displayed per page, or changes the sorting of items, the state is reset and a new list of items are fetched. Changing the view mode (table or grid view) does not reset the state.
 
-### `npm run build`
+For some statistics data, the GitHub API may respond with a server code 202. This means that the data is not yet ready. In this case, the app will try to refetch the data (five times with about five seconds in between the attempts).
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+It is suboptimal that the amount of required API calls for statistics is a factor of the amount of fetched repositories. This could be avoided by using GraphQL. GraphQL would allow to define the structure of the required data in a single API call. However, a GraphQL call to list organization repositories produced an error "...the `Vincit` organization has enabled OAuth App access restrictions..." and thus GraphQL was not used.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Technologies
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+React
+- React is a popular JavaScript library for building user interfaces. I chose it because it does the job well and I'm familiar with it.
 
-### `npm run eject`
+Axios
+- HTTP client. I chose Axios because it is easy to use. I also considered GitHub API v4 and GraphQL with Apollo/Client to reduce the amount of API calls. However, when making the following GraphQL request to GitHub API v4:
+  {
+    organization(login:"vincit"){
+      login
+      repositories(first:2){nodes{name}}
+    }
+  }
+  I received an error: "...the `Vincit` organization has enabled OAuth App access restrictions...". Thus, I remained using GitHub API v3 and Axios.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Material-UI
+- Material-UI is a popular JavaScript library for building React applications implementing Material Design. I chose it because because I'm familiar with it and it makes it easy to build good responsive UIs.
