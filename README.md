@@ -6,7 +6,7 @@ Worksample: GitHub API App
 
 2. Create .env file to root folder with the following content:<br>
    REACT_APP_GITHUB_ACCESS_TOKEN=[GitHub personal access token]<br>
-   REACT_APP_ORGANIZATION=[GitHub organization name]
+   REACT_APP_ORGANIZATION=[GitHub organization name, e.g. google]
 
 3. npm start
 
