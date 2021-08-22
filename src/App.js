@@ -38,9 +38,10 @@ const App = () => {
   const [pages, setPages] = useState(initialPages);
 
   useEffect(() => {
-    window.addEventListener('resize', () => setWidth(window.innerWidth));
+    const resize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', resize);
     return () => {
-      window.removeEventListener('resize', () => setWidth(window.innerWidth));
+      window.removeEventListener('resize', resize);
     };
   }, []);
 

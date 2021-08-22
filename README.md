@@ -23,6 +23,8 @@ When the user changes the amount of items to be displayed per page, or changes t
 
 For some statistics data, the GitHub API may respond with a server code 202. This means that the data is not yet ready. In this case, the app will try to refetch the data (five times with about five seconds in between the attempts).
 
+(Update Aug 2021: currently GitHub API responds with code 202 for all statistics data requests with the format `https://api.github.com/repos/[ORGANIZATION]/[REPOSITORYNAME]/stats/contributors`, as used in this app).
+
 It is suboptimal that the amount of required API calls for statistics is a factor of the amount of fetched repositories. This could be avoided by using GraphQL. GraphQL would allow to define the structure of the required data in a single API call. However, some organizations have placed OAuth App access restrictions preventing GraphQL calls to list organization repositories, and thus GraphQL was not used.
 
 ## Technologies

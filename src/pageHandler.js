@@ -16,6 +16,7 @@ export const handleStatistics = async ({
       const newStatisticsRetry = { ...statisticsRetry };
 
       fetchedStatistics.forEach((x) => {
+        console.log('GitHub API server code for statistics data request:', x.statistics.status);
         if (x.statistics.status === 200) {
           newStatistics[x.repositoryName] = x.statistics.data.sort((xx, yy) => yy.total - xx.total);
           delete newStatisticsRetry[x.repositoryName];
